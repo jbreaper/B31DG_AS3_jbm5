@@ -1,6 +1,6 @@
 ### B31DG_AS3_jbm5
 # B31DG: Embedded Software
-# Assignment 2
+# Assignment 3
 ###### Jack B. Mavor
 ###### H00298763
  Using FreeRTOS, the tasks from assignment 2 were recreated
@@ -11,20 +11,10 @@ This repository was created to work with my VSCode environment and workflow, to 
 ## Tasks
 - [ ] setup FreeRTOS
 - [ ] write code
-- [ ] design circuit
-- [ ] build circuit
-- [ ] test code
-  - [ ] task 1
-  - [ ] task 2
-  - [ ] task 3
-  - [ ] task 4
-  - [ ] task 5
-  - [ ] task 6
-  - [ ] task 7
-  - [ ] task 8
-  - [ ] task 9
+    - [ ] Repurpose Assignment 2 Code 
+    - [ ] Determine Task Sheduling Method
 - [ ] Documentation
-  - [ ] N-S diagram
-  - [ ] Circuit Diagram
-  - [ ] Other Diagrams?
-  - [ ] Report
+    - [ ] Task sheduling diagram
+    - [ ] Report
+
+## Diagrams and Graphics
