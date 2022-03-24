@@ -94,18 +94,19 @@ float analogues[4];
 
 int error_code;
 
-struct data
+struct Data
 {
     bool button;
     int frequency;
     float analog;
-};
+} data;
 
 // generate pulse of with 50us
 void task_1()
 {
     digitalWrite(WD, HIGH);
-    delayMicroseconds(50);
+    // 50 microsecond delay 
+    vTaskDelay((50/1000)/portTICK_PERIOD_MS);
     digitalWrite(WD, LOW);
 }
 
