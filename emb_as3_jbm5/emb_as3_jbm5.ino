@@ -84,21 +84,16 @@
 
 volatile int tick;
 
-bool button_1 = false;
-
-float frequency_in = 0;
-
 float analogue_in;
-float average_analogue_in = 0;
 float analogues[4];
 
 int error_code;
 
 struct Data
 {
-    bool button;
-    int frequency;
-    float analog;
+    bool button = false;
+    int frequency = 0;
+    float analog = 0;
 } data;
 
 // generate pulse of with 50us
@@ -113,7 +108,7 @@ void task_1()
 // read input of a button on pin PB1
 void task_2()
 {
-    button_1 = digitalRead(PB1);
+    data.button = digitalRead(PB1);
 }
 
 // determine frequency of digital signal on pin PULSE_IN
@@ -121,7 +116,7 @@ void task_3()
 {
     float high;
     high = pulseIn(PULSE_IN, LOW);
-    frequency_in = 1000000.0 / (high * 2);
+    data.frequency = 1000000.0 / (high * 2);
 }
 
 // read analogue input on pin A_IN
@@ -132,20 +127,20 @@ void task_4()
         analogues[i - 1] = analogues[i];
     }
 
-    analogues[3] = 4095 - analogRead(A_IN);
+    analogues[3] = analogRead(A_IN);
 }
 
 // Average last 4 analog input readings
 void task_5()
 {
-    average_analogue_in = 0;
+    data.analog = 0;
 
     for (int i = 0; i < 4; i++)
     {
-        average_analogue_in += analogues[i];
+        data.analog += analogues[i];
     }
 
-    average_analogue_in = average_analogue_in / 4;
+    data.analog = data.analog / 4;
 }
 
 // use "__asm__ __volatile__ ("nop");" 1000 times
@@ -160,7 +155,7 @@ void task_6()
 // determine error code based on average analogue reading
 void task_7()
 {
-    if (average_analogue_in > (4095 / 2))
+    if (data.analog > (4095 / 2))
     {
         error_code = 1;
     }
@@ -180,11 +175,11 @@ void task_8()
 // This data is presented in a CSV format
 void task_9()
 {
-    Serial.print(button_1);
+    Serial.print(data.button);
     Serial.print(", \t");
-    Serial.print(frequency_in);
+    Serial.print(data.frequency);
     Serial.print(", \t");
-    Serial.print(((average_analogue_in * 3.3) / 4095));
+    Serial.print(((data.analog * 3.3) / 4095));
     Serial.print("\n");
 }
 
