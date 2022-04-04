@@ -1,5 +1,5 @@
 {
-    "sketch": "emb_as3\\emb_as3.ino",
+    "sketch": "emb_as3_jbm5\\emb_as3_jbm5.ino",
     "configuration": "FlashFreq=80,UploadSpeed=921600,DebugLevel=none",
     "board": "esp32:esp32:esp32doit-devkit-v1"
 }

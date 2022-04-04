@@ -69,6 +69,7 @@
 #define T_CLK 4
 
 // Rate of task (ticks)
+#define R_T1 1
 #define R_T2 50  // 200  /4
 #define R_T3 250 // 1000 /4
 // while hz to ms gives 41.666666... for multiple
@@ -97,22 +98,22 @@ struct Data
 } data;
 
 // generate pulse of with 50us
-void task_1()
+void task_1(void *pvParameters)
 {
     digitalWrite(WD, HIGH);
-    // 50 microsecond delay 
-    vTaskDelay((50/1000)/portTICK_PERIOD_MS);
+    // 50 microsecond delay
+    vTaskDelay((50 / 1000) / portTICK_PERIOD_MS);
     digitalWrite(WD, LOW);
 }
 
 // read input of a button on pin PB1
-void task_2()
+void task_2(void *pvParameters)
 {
     data.button = digitalRead(PB1);
 }
 
 // determine frequency of digital signal on pin PULSE_IN
-void task_3()
+void task_3(void *pvParameters)
 {
     float high;
     high = pulseIn(PULSE_IN, LOW);
@@ -120,7 +121,7 @@ void task_3()
 }
 
 // read analogue input on pin A_IN
-void task_4()
+void task_4(void *pvParameters)
 {
     for (int i = 1; i < 4; i++)
     {
@@ -131,7 +132,7 @@ void task_4()
 }
 
 // Average last 4 analog input readings
-void task_5()
+void task_5(void *pvParameters)
 {
     data.analog = 0;
 
@@ -144,7 +145,7 @@ void task_5()
 }
 
 // use "__asm__ __volatile__ ("nop");" 1000 times
-void task_6()
+void task_6(void *pvParameters)
 {
     for (int i = 0; i < 1000; i++)
     {
@@ -153,7 +154,7 @@ void task_6()
 }
 
 // determine error code based on average analogue reading
-void task_7()
+void task_7(void *pvParameters)
 {
     if (data.analog > (4095 / 2))
     {
@@ -166,21 +167,24 @@ void task_7()
 }
 
 // light LED based on error code
-void task_8()
+void task_8(void *pvParameters)
 {
     digitalWrite(LED, error_code);
 }
 
 // print; button PB1 state, Frequency of PULSE_IN, and average of alalogue input A_IN
 // This data is presented in a CSV format
-void task_9()
+void task_9(void *pvParameters)
 {
-    Serial.print(data.button);
-    Serial.print(", \t");
-    Serial.print(data.frequency);
-    Serial.print(", \t");
-    Serial.print(((data.analog * 3.3) / 4095));
-    Serial.print("\n");
+    if (data.button == 1)
+    {
+        Serial.print(data.button);
+        Serial.print(", \t");
+        Serial.print(data.frequency);
+        Serial.print(", \t");
+        Serial.print(((data.analog * 3.3) / 4095));
+        Serial.print("\n");
+    }
 }
 
 void setup()
@@ -196,7 +200,78 @@ void setup()
     pinMode(A_IN, INPUT);
     pinMode(PULSE_IN, INPUT);
     Serial.print("\nSwitch, \tFrequency, \tInput \n");
-    // xTaskCreate
+
+    xTaskCreate(
+        task_1,
+        "task 1",
+        1024,
+        NULL,
+        2,
+        NULL);
+
+    xTaskCreate(
+        task_2,
+        "task 2",
+        1024,
+        NULL,
+        2,
+        NULL);
+
+    xTaskCreate(
+        task_3,
+        "task 3",
+        1024,
+        NULL,
+        2,
+        NULL);
+
+    xTaskCreate(
+        task_4,
+        "task 4",
+        1024,
+        NULL,
+        2,
+        NULL);
+
+    xTaskCreate(
+        task_5,
+        "task 5",
+        1024,
+        NULL,
+        2,
+        NULL);
+
+    xTaskCreate(
+        task_6,
+        "task 6",
+        1024,
+        NULL,
+        2,
+        NULL);
+
+    xTaskCreate(
+        task_7,
+        "task 7",
+        1024,
+        NULL,
+        2,
+        NULL);
+
+    xTaskCreate(
+        task_8,
+        "task 8",
+        1024,
+        NULL,
+        2,
+        NULL);
+
+    xTaskCreate(
+        task_9,
+        "task 9",
+        1024,
+        NULL,
+        2,
+        NULL);
 }
 
 void loop()
