@@ -63,32 +63,40 @@
 #define A_IN 2      // Pin G0,  Used to read an analogue input signal
 #define PULSE_IN 18 // Pin G18, Used to read a digital input signal
 
-// using lowest common multiple of the frequencies, a timing to allow all
-// tasks to be triggered was calculated, 8.33333333...ms
-// to decrease the loss through rounding, this was then halved to 4.166...
-#define T_CLK 4
-
-// Rate of task (ticks)
-#define R_T1 1
-#define R_T2 50  // 200  /4
-#define R_T3 250 // 1000 /4
+// Rate of task (ms)
+#define R_T1 20.4
+#define R_T2 200    // 5 Hz
+#define R_T3 1000   // 1 Hz
 // while hz to ms gives 41.666666... for multiple
 // reasons this has been rounded to 42
-#define R_T4 10 // 41.666../4
-#define R_T5 10 // 41.666../4
-#define R_T6 25 // 100  /4
+#define R_T4 41.667     // 24 Hz
+#define R_T5 41.667     // 24 Hz
+#define R_T6 100    // 10 Hz
 // while hz to ms gives 333.33333... for multiple
 // reasons this has been rounded to 333
-#define R_T7 83   // 333.33.../4
-#define R_T8 83   // 333.33.../4
-#define R_T9 1250 // 5000/4
+#define R_T7 333.333    // 3 Hz
+#define R_T8 333.333    // 3 Hz
+#define R_T9 5000   // 0.2 Hz
 
-volatile int tick;
+#define TaskDelay(x) vTaskDelay(x/ portTICK_PERIOD_MS)
 
-float analogue_in;
-float analogues[4];
 
-int error_code;
+void task_1(void *pvParameters);
+void task_2(void *pvParameters);
+void task_3(void *pvParameters);
+void task_4(void *pvParameters);
+void task_5(void *pvParameters);
+void task_6(void *pvParameters);
+void task_7(void *pvParameters);
+void task_8(void *pvParameters);
+void task_9(void *pvParameters);
+
+static QueueHandle_t analog_queue;
+static QueueHandle_t average_queue;
+
+static SemaphoreHandle_t data_mut;
+
+volatile int error_code;
 
 struct Data
 {
@@ -100,121 +108,222 @@ struct Data
 // generate pulse of with 50us
 void task_1(void *pvParameters)
 {
-    digitalWrite(WD, HIGH);
-    // 50 microsecond delay
-    vTaskDelay((50 / 1000) / portTICK_PERIOD_MS);
-    digitalWrite(WD, LOW);
+    (void) pvParameters;
+    for (;;)
+    {
+        digitalWrite(WD, HIGH);
+        // 50 microsecond delay
+        TaskDelay(0.05);
+        digitalWrite(WD, LOW);
+
+        TaskDelay(R_T1);
+    }
 }
 
 // read input of a button on pin PB1
 void task_2(void *pvParameters)
-{
-    data.button = digitalRead(PB1);
+{   
+    (void) pvParameters;
+    for (;;)
+    {
+        if(xSemaphoreTake(data_mut, portMAX_DELAY) == pdTRUE){
+            data.button = digitalRead(PB1);
+            xSemaphoreGive(data_mut);
+        }
+
+        TaskDelay(R_T2);
+    }
 }
 
 // determine frequency of digital signal on pin PULSE_IN
 void task_3(void *pvParameters)
-{
-    float high;
-    high = pulseIn(PULSE_IN, LOW);
-    data.frequency = 1000000.0 / (high * 2);
+{   
+    float high = 0;
+    
+    (void) pvParameters;
+    for (;;)
+    {
+        if(xSemaphoreTake(data_mut, portMAX_DELAY) == pdTRUE){
+            high = pulseIn(PULSE_IN, LOW);
+            data.frequency = 1000000.0 / (high * 2);
+
+            xSemaphoreGive(data_mut);
+        }
+
+        TaskDelay(R_T3);
+    }
 }
 
 // read analogue input on pin A_IN
 void task_4(void *pvParameters)
-{
-    for (int i = 1; i < 4; i++)
+{   
+    float x = 0;
+    
+    (void) pvParameters;
+    for (;;)
     {
-        analogues[i - 1] = analogues[i];
-    }
+        x = ((analogRead(A_IN) * 3.3) / 4095);
+        xQueueSend(analog_queue, &x, 100);
 
-    analogues[3] = analogRead(A_IN);
+        TaskDelay(R_T4);
+    }
 }
 
 // Average last 4 analog input readings
 void task_5(void *pvParameters)
-{
-    data.analog = 0;
+{ 
+    float analogs[4] = {0, 0, 0, 0};    
 
-    for (int i = 0; i < 4; i++)
+    (void) pvParameters;
+    for (;;)
     {
-        data.analog += analogues[i];
-    }
+        float x = 0;
+        float y = 0;
 
-    data.analog = data.analog / 4;
+        if(xQueueReceive(analog_queue, &x, 100)){
+            for (int i = 1; i < 4; i++)
+            {
+                analogs[i - 1] = analogs[i];
+                Serial.print(i - 1);
+                Serial.print(": ");
+                Serial.println(analogs[i - 1]);
+            }
+
+            
+            Serial.print(3);
+            Serial.print(": ");
+            Serial.println(analogs[3]);
+
+            analogs[3] = x;
+        }
+
+        if(xSemaphoreTake(data_mut, portMAX_DELAY) == pdTRUE){
+            
+            for (int i = 0; i < 4; i++)
+            {
+                y += analogs[i];
+            }
+
+            y = y / 4;
+
+            data.analog = y;
+
+            Serial.println(data.analog);
+
+            xQueueSend(average_queue, &y, 100);
+
+            xSemaphoreGive(data_mut);
+        }
+
+        TaskDelay(R_T5);
+    }
 }
 
 // use "__asm__ __volatile__ ("nop");" 1000 times
 void task_6(void *pvParameters)
-{
-    for (int i = 0; i < 1000; i++)
+{    
+    (void) pvParameters;
+    for (;;)
     {
-        __asm__ __volatile__("nop");
+        for (int i = 0; i < 1000; i++)
+        {
+            __asm__ __volatile__("nop");
+        }
+
+        TaskDelay(R_T6);
     }
 }
 
 // determine error code based on average analogue reading
 void task_7(void *pvParameters)
-{
-    if (data.analog > (4095 / 2))
+{    
+    (void) pvParameters;
+    for (;;)
     {
-        error_code = 1;
-    }
-    else
-    {
-        error_code = 0;
+        float x = 0;
+        if (xQueueReceive(average_queue, &x, 100)){
+            if ( x > (4095 / 2))
+            {
+                error_code = 1;
+            }
+            else
+            {
+                error_code = 0;
+            }
+        }
+
+        TaskDelay(R_T7);
     }
 }
 
 // light LED based on error code
 void task_8(void *pvParameters)
-{
-    digitalWrite(LED, error_code);
+{    
+    (void) pvParameters;
+    for (;;)
+    {
+        digitalWrite(LED, error_code);
+    
+        TaskDelay(R_T8);
+    }
 }
 
 // print; button PB1 state, Frequency of PULSE_IN, and average of alalogue input A_IN
 // This data is presented in a CSV format
 void task_9(void *pvParameters)
-{
-    if (data.button == 1)
+{    
+    (void) pvParameters;
+    for (;;)
     {
-        Serial.print(data.button);
-        Serial.print(", \t");
-        Serial.print(data.frequency);
-        Serial.print(", \t");
-        Serial.print(((data.analog * 3.3) / 4095));
-        Serial.print("\n");
+        if(xSemaphoreTake(data_mut, portMAX_DELAY) == pdTRUE){
+            if (data.button == 1)
+            {
+                Serial.print(data.button);
+                Serial.print(", \t\t");
+                Serial.print(data.frequency);
+                Serial.print(", \t\t");
+                Serial.print(data.analog);
+                Serial.print("\n");
+            }
+            xSemaphoreGive(data_mut);
+        }
+
+        TaskDelay(R_T9);
     }
 }
 
 void setup()
 {
-    Serial.begin(57600);
-    analogues[0] = 0;
-    analogues[1] = 0;
-    analogues[2] = 0;
-    analogues[3] = 0;
+    Serial.begin(115200);
     pinMode(LED, OUTPUT);
     pinMode(WD, OUTPUT);
     pinMode(PB1, INPUT);
     pinMode(A_IN, INPUT);
     pinMode(PULSE_IN, INPUT);
-    Serial.print("\nSwitch, \tFrequency, \tInput \n");
+
+    Serial.println(portTICK_PERIOD_MS);
+
+    Serial.println("----------------------------------\nSwitch, \tFrequency, \tInput\n----------------------------------");
+
+    data_mut = xSemaphoreCreateMutex();
+
+    analog_queue = xQueueCreate(1, sizeof(float));
+    average_queue = xQueueCreate(1, sizeof(float));
 
     xTaskCreate(
         task_1,
         "task 1",
-        1024,
+        512,
         NULL,
-        2,
+        4,
         NULL);
 
     xTaskCreate(
         task_2,
         "task 2",
-        1024,
+        512,
         NULL,
-        2,
+        3,
         NULL);
 
     xTaskCreate(
@@ -222,7 +331,7 @@ void setup()
         "task 3",
         1024,
         NULL,
-        2,
+        3,
         NULL);
 
     xTaskCreate(
@@ -238,15 +347,15 @@ void setup()
         "task 5",
         1024,
         NULL,
-        2,
+        1,
         NULL);
 
     xTaskCreate(
         task_6,
         "task 6",
-        1024,
+        512,
         NULL,
-        2,
+        3,
         NULL);
 
     xTaskCreate(
@@ -254,15 +363,15 @@ void setup()
         "task 7",
         1024,
         NULL,
-        2,
+        4,
         NULL);
 
     xTaskCreate(
         task_8,
         "task 8",
-        1024,
+        512,
         NULL,
-        2,
+        3,
         NULL);
 
     xTaskCreate(
@@ -270,10 +379,8 @@ void setup()
         "task 9",
         1024,
         NULL,
-        2,
+        4,
         NULL);
 }
 
-void loop()
-{
-}
+void loop(){}
