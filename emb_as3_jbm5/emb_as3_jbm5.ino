@@ -60,7 +60,7 @@
 #define LED 14      // Pin G14, Used to output error signal
 #define WD 19       // Pin G19, Used to output the watchdog signal
 #define PB1 12      // Pin G12, Used to read the state of a push button
-#define A_IN 2      // Pin G0,  Used to read an analogue input signal
+#define A_IN 4      // Pin G0,  Used to read an analogue input signal
 #define PULSE_IN 18 // Pin G18, Used to read a digital input signal
 
 // Rate of task (ms)
@@ -113,7 +113,7 @@ void task_1(void *pvParameters)
     {
         digitalWrite(WD, HIGH);
         // 50 microsecond delay
-        TaskDelay(0.05);
+        TaskDelay(0.05*portTICK_PERIOD_MS);
         digitalWrite(WD, LOW);
 
         TaskDelay(R_T1);
@@ -157,12 +157,12 @@ void task_3(void *pvParameters)
 // read analogue input on pin A_IN
 void task_4(void *pvParameters)
 {   
-    float x = 0;
+    int x = 0;
     
     (void) pvParameters;
     for (;;)
     {
-        x = ((analogRead(A_IN) * 3.3) / 4095);
+        x = analogRead(A_IN);
         xQueueSend(analog_queue, &x, 100);
 
         TaskDelay(R_T4);
@@ -177,24 +177,16 @@ void task_5(void *pvParameters)
     (void) pvParameters;
     for (;;)
     {
-        float x = 0;
+        int x = 0;
         float y = 0;
 
         if(xQueueReceive(analog_queue, &x, 100)){
             for (int i = 1; i < 4; i++)
             {
                 analogs[i - 1] = analogs[i];
-                Serial.print(i - 1);
-                Serial.print(": ");
-                Serial.println(analogs[i - 1]);
             }
 
-            
-            Serial.print(3);
-            Serial.print(": ");
-            Serial.println(analogs[3]);
-
-            analogs[3] = x;
+            analogs[3] = x * (3.3 / 4095);
         }
 
         if(xSemaphoreTake(data_mut, portMAX_DELAY) == pdTRUE){
@@ -207,8 +199,6 @@ void task_5(void *pvParameters)
             y = y / 4;
 
             data.analog = y;
-
-            Serial.println(data.analog);
 
             xQueueSend(average_queue, &y, 100);
 
@@ -242,7 +232,7 @@ void task_7(void *pvParameters)
     {
         float x = 0;
         if (xQueueReceive(average_queue, &x, 100)){
-            if ( x > (4095 / 2))
+            if ( x > (3.3 / 2))
             {
                 error_code = 1;
             }
@@ -303,7 +293,7 @@ void setup()
 
     Serial.println(portTICK_PERIOD_MS);
 
-    Serial.println("----------------------------------\nSwitch, \tFrequency, \tInput\n----------------------------------");
+    Serial.println("-------------------------------------\nSwitch, \tFrequency, \tInput\n-------------------------------------");
 
     data_mut = xSemaphoreCreateMutex();
 
