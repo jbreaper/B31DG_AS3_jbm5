@@ -9,13 +9,13 @@
 This repository was created to work with my VSCode environment and workflow, to this end there are files within this repository that are meant to setup and maintain that environment. The only file required to run the project is the file "em_as3_jbm2.ino", all other files are either part of the VSCode workflow, or other documents related to the project.
 
 ## Tasks
-- [ ] setup FreeRTOS
-- [ ] write code
-    - [ ] Repurpose Assignment 2 Code 
-    - [ ] Determine Task Sheduling Method
-- [ ] Documentation
+- [x] setup FreeRTOS
+- [x] write code
+    - [x] Repurpose Assignment 2 Code 
+    - [x] Determine Task Sheduling Method
+- [x] Documentation
     - [ ] Task sheduling diagram
-    - [ ] Report
+    - [x] Report
 
 ## Diagrams and Graphics
 
