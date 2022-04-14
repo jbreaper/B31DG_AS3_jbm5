@@ -20,7 +20,7 @@ This repository was created to work with my VSCode environment and workflow, to 
 ## Diagrams and Graphics
 
 ## Demo
-
-<p align="center">
-<iframe width="560" height="315" src="https://www.youtube.com/embed/r-GF549qqkU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</p>
+<p align="center">Click to play</p>
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=r-GF549qqkU"><img src="https://img.youtube.com/vi/r-GF549qqkU/0.jpg" alt="Demo"></a>
+</div>
