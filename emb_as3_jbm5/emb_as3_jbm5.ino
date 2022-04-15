@@ -87,7 +87,7 @@
 */
 #define R_T7 333        // 3 Hz
 #define R_T8 333        // 3 Hz
-#define R_T9 1000       // 0.2 Hz
+#define R_T9 5000       // 0.2 Hz
 
 // alternate to vtaskdelay that allows the delay to 
 // be defined using milliseconds rather than ticks
