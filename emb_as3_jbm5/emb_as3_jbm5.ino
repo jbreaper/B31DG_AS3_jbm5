@@ -12,7 +12,7 @@
  * __________________________________________________________________________________________________________________________
  * |  Task  | Description                                                                       | Frequency   | Periodicity |
  * __________________________________________________________________________________________________________________________
- * |  1     | Output a (digital) watchdog waveform (with same length and period of the ‘Normal’ | each cycle  |   1ms       |
+ * |  1     | Output a (digital) watchdog waveform (with same length and period of the ‘Normal’ |     50Hz    |   20ms      |
  * |        | operation of SigB in Assignment 1). Timings should be within 5%.                  |             |             |
  * __________________________________________________________________________________________________________________________
  * |  2     | Monitor one digital input (to be connected to a pushbutton/switch or a signal     |     5Hz     |   200ms     |
@@ -71,7 +71,7 @@
 * has been rounded to 42 as the ESP32's
 * freeRTOS tick rate is 1ms
 */
-#define R_T1 20         // 49 Hz
+#define R_T1 20         // 50 Hz
 #define R_T2 200        // 5 Hz
 #define R_T3 1000       // 1 Hz
 /* while hz to ms gives 41.666666...this 
