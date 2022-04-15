@@ -1,5 +1,6 @@
 /* Embbeded Software - Assignment 3
- * This project was programmed for for the ESP32 microcontroller, it uses freeRTOS to run a series of tasks based on the provided brief.
+ * This project was programmed for for the ESP32 microcontroller, it uses freeRTOS to run a series of tasks 
+ * based on the provided brief.
  *
  * -------
  *  BRIEF
@@ -16,7 +17,7 @@
  * __________________________________________________________________________________________________________________________
  * |  2     | Monitor one digital input (to be connected to a pushbutton/switch or a signal     |     5Hz     |   200ms     |
  * |        | generator for students using Proteus).                                            |             |             |
- * __________________________________________________________________________________________________________________________
+ * ____\______________________________________________________________________________________________________________________
  * |  3     | Measure the frequency of a 3.3v square wave signal. The frequency will be in the  |     1Hz     |   1000ms    |
  * |        | range 500Hz to 1000Hz and the signal will be a standard square wave (50% duty     |             |             |
  * |        | cycle). Accuracy to 2.5% is acceptable.                                           |             |             |
@@ -50,6 +51,8 @@
  * __________________________________________________________________________________________________________________________
  */
 
+
+// determine the number of cores availible
 #if CONFIG_FREERTOS_UNICORE
 #define ARDUINO_RUNNING_CORE 0
 #else
@@ -57,30 +60,40 @@
 #endif
 
 // pin assignments
-#define LED 14      // Pin G14, Used to output error signal
-#define WD 19       // Pin G19, Used to output the watchdog signal
-#define PB1 12      // Pin G12, Used to read the state of a push button
-#define A_IN 4      // Pin G0,  Used to read an analogue input signal
-#define PULSE_IN 18 // Pin G18, Used to read a digital input signal
+#define LED 14          // Pin G14, Used to output error signal
+#define WD 19           // Pin G19, Used to output the watchdog signal
+#define PB1 12          // Pin G12, Used to read the state of a push button
+#define A_IN 4          // Pin G4,  Used to read an analogue input signal
+#define PULSE_IN 18     // Pin G18, Used to read a digital input signal
 
 // Rate of task (ms)
-#define R_T1 20.4
-#define R_T2 200    // 5 Hz
-#define R_T3 1000   // 1 Hz
-// while hz to ms gives 41.666666... for multiple
-// reasons this has been rounded to 42
-#define R_T4 41.667     // 24 Hz
-#define R_T5 41.667     // 24 Hz
-#define R_T6 100    // 10 Hz
-// while hz to ms gives 333.33333... for multiple
-// reasons this has been rounded to 333
-#define R_T7 333.333    // 3 Hz
-#define R_T8 333.333    // 3 Hz
-#define R_T9 5000   // 0.2 Hz
+/* while hz to ms gives 20.4, this 
+* has been rounded to 42 as the ESP32's
+* freeRTOS tick rate is 1ms
+*/
+#define R_T1 20         // 49 Hz
+#define R_T2 200        // 5 Hz
+#define R_T3 1000       // 1 Hz
+/* while hz to ms gives 41.666666...this 
+* has been rounded to 42 as the ESP32's
+* freeRTOS tick rate is 1ms
+*/
+#define R_T4 42         // 24 Hz
+#define R_T5 42         // 24 Hz
+#define R_T6 100        // 10 Hz
+/* while hz to ms gives 333.33333... this 
+* has been rounded to 333 as the ESP32's
+* freeRTOS tick rate is 1ms
+*/
+#define R_T7 333        // 3 Hz
+#define R_T8 333        // 3 Hz
+#define R_T9 1000       // 0.2 Hz
 
-#define TaskDelay(x) vTaskDelay(x/ portTICK_PERIOD_MS)
+// alternate to vtaskdelay that allows the delay to 
+// be defined using milliseconds rather than ticks
+#define TaskDelay(x) vTaskDelay(x/portTICK_PERIOD_MS)
 
-
+// prototype functions for tasks
 void task_1(void *pvParameters);
 void task_2(void *pvParameters);
 void task_3(void *pvParameters);
@@ -91,13 +104,18 @@ void task_7(void *pvParameters);
 void task_8(void *pvParameters);
 void task_9(void *pvParameters);
 
+// Defined Queue handles for analog signal
+// and avaraged analogue signal queues
 static QueueHandle_t analog_queue;
 static QueueHandle_t average_queue;
 
+// Mutex to protect the "data" struct variable
 static SemaphoreHandle_t data_mut;
 
+// error code variable for low analogue voltage check
 volatile int error_code;
 
+// Struct to collect all data to be output in task 9
 struct Data
 {
     bool button = false;
@@ -113,9 +131,11 @@ void task_1(void *pvParameters)
     {
         digitalWrite(WD, HIGH);
         // 50 microsecond delay
-        TaskDelay(0.05*portTICK_PERIOD_MS);
+        delayMicroseconds(50);
         digitalWrite(WD, LOW);
 
+        // delays task for rate
+        // before restarting
         TaskDelay(R_T1);
     }
 }
@@ -126,11 +146,19 @@ void task_2(void *pvParameters)
     (void) pvParameters;
     for (;;)
     {
+        // Mutex protection statement
+        // prevents memory access issues
+        // attempts to take the mutex access token
+        // only continues if the access token is availible
         if(xSemaphoreTake(data_mut, portMAX_DELAY) == pdTRUE){
             data.button = digitalRead(PB1);
+
+            // return mutex access token
             xSemaphoreGive(data_mut);
         }
 
+        // delays task for rate
+        // before restarting
         TaskDelay(R_T2);
     }
 }
@@ -138,18 +166,25 @@ void task_2(void *pvParameters)
 // determine frequency of digital signal on pin PULSE_IN
 void task_3(void *pvParameters)
 {   
-    float high = 0;
+    float duration = 0;
     
     (void) pvParameters;
     for (;;)
     {
+        // Mutex protection statement
+        // prevents memory access issues
+        // attempts to take the mutex access token
+        // only continues if the access token is availible
         if(xSemaphoreTake(data_mut, portMAX_DELAY) == pdTRUE){
-            high = pulseIn(PULSE_IN, LOW);
-            data.frequency = 1000000.0 / (high * 2);
+            duration = pulseIn(PULSE_IN, LOW);
+            data.frequency = 1000000.0 / (duration * 2);
 
+            // return mutex access token
             xSemaphoreGive(data_mut);
         }
 
+        // delays task for rate
+        // before restarting
         TaskDelay(R_T3);
     }
 }
@@ -165,6 +200,8 @@ void task_4(void *pvParameters)
         x = analogRead(A_IN);
         xQueueSend(analog_queue, &x, 100);
 
+        // delays task for rate
+        // before restarting
         TaskDelay(R_T4);
     }
 }
@@ -189,6 +226,10 @@ void task_5(void *pvParameters)
             analogs[3] = x * (3.3 / 4095);
         }
 
+        // Mutex protection statement
+        // prevents memory access issues
+        // attempts to take the mutex access token
+        // only continues if the access token is availible
         if(xSemaphoreTake(data_mut, portMAX_DELAY) == pdTRUE){
             
             for (int i = 0; i < 4; i++)
@@ -202,9 +243,12 @@ void task_5(void *pvParameters)
 
             xQueueSend(average_queue, &y, 100);
 
+            // return mutex access token
             xSemaphoreGive(data_mut);
         }
 
+        // delays task for rate
+        // before restarting
         TaskDelay(R_T5);
     }
 }
@@ -220,6 +264,8 @@ void task_6(void *pvParameters)
             __asm__ __volatile__("nop");
         }
 
+        // delays task for rate
+        // before restarting
         TaskDelay(R_T6);
     }
 }
@@ -231,6 +277,8 @@ void task_7(void *pvParameters)
     for (;;)
     {
         float x = 0;
+
+        // tasks next item from average queue and assign is to variable x
         if (xQueueReceive(average_queue, &x, 100)){
             if ( x > (3.3 / 2))
             {
@@ -242,6 +290,8 @@ void task_7(void *pvParameters)
             }
         }
 
+        // delays task for rate
+        // before restarting
         TaskDelay(R_T7);
     }
 }
@@ -254,6 +304,8 @@ void task_8(void *pvParameters)
     {
         digitalWrite(LED, error_code);
     
+        // delays task for rate
+        // before restarting
         TaskDelay(R_T8);
     }
 }
@@ -265,19 +317,27 @@ void task_9(void *pvParameters)
     (void) pvParameters;
     for (;;)
     {
+        // Mutex protection statement
+        // prevents memory access issues
+        // attempts to take the mutex access token
+        // only continues if the access token is availible
         if(xSemaphoreTake(data_mut, portMAX_DELAY) == pdTRUE){
             if (data.button == 1)
             {
                 Serial.print(data.button);
-                Serial.print(", \t\t");
+                Serial.print(", \t\t\t");
                 Serial.print(data.frequency);
                 Serial.print(", \t\t");
                 Serial.print(data.analog);
                 Serial.print("\n");
             }
+
+            // return mutex access token
             xSemaphoreGive(data_mut);
         }
 
+        // delays task for rate
+        // before restarting
         TaskDelay(R_T9);
     }
 }
@@ -285,20 +345,33 @@ void task_9(void *pvParameters)
 void setup()
 {
     Serial.begin(115200);
+
+    // setup pins
     pinMode(LED, OUTPUT);
     pinMode(WD, OUTPUT);
     pinMode(PB1, INPUT);
     pinMode(A_IN, INPUT);
     pinMode(PULSE_IN, INPUT);
 
-    Serial.println(portTICK_PERIOD_MS);
+    // header to assist with reading the CSV formatted output
+    Serial.println("-------------------------------------");
+    Serial.println("Switch, \tFrequency, \tInput");
+    Serial.println("-------------------------------------");
 
-    Serial.println("-------------------------------------\nSwitch, \tFrequency, \tInput\n-------------------------------------");
-
+    //setup mutex in order to protect the "data" struct
     data_mut = xSemaphoreCreateMutex();
 
+    //setup queues for analog readings and averaged analogue readings
     analog_queue = xQueueCreate(1, sizeof(float));
     average_queue = xQueueCreate(1, sizeof(float));
+
+    // setup freeRTOS tasks for each of the task functions
+    /* xTaskCreate(
+    *       task function,
+    *       name for debugging purposes,
+    *       stack size,
+    *       pvParamer
+    */
 
     xTaskCreate(
         task_1,
